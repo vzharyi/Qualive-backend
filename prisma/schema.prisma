@@ -1,0 +1,189 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                 Int             @id @default(autoincrement())
+  login              String          @unique(map: "users_login_uq") @db.VarChar(100)
+  password           String          @db.VarChar(255)
+  email              String          @unique(map: "users_email_uq") @db.VarChar(255)
+  firstName          String          @map("first_name") @db.VarChar(100)
+  lastName           String          @map("last_name") @db.VarChar(100)
+  avatarUrl          String?         @map("avatar_url") @db.VarChar(255)
+  githubId           String?         @unique(map: "users_github_id_uq") @map("github_id") @db.VarChar(255)
+  googleId           String?         @unique(map: "users_google_id_uq") @map("google_id") @db.VarChar(255)
+  createdAt          DateTime        @default(now()) @map("created_at") @db.Timestamp(0)
+  updatedAt          DateTime        @default(now()) @updatedAt @map("updated_at") @db.Timestamp(0)
+  comments           Comment[]
+  projectMemberships ProjectMember[]
+  ownedProjects      Project[]       @relation("ProjectOwner")
+  assignedTasks      Task[]          @relation("TaskAssignee")
+  reportedTasks      Task[]          @relation("TaskReporter")
+
+  @@map("users")
+}
+
+model Project {
+  id                  Int             @id @default(autoincrement())
+  ownerId             Int             @map("owner_id")
+  name                String          @db.VarChar(100)
+  description         String?         @db.Text
+  avatarUrl           String?         @map("avatar_url") @db.VarChar(255)
+  status              ProjectStatus   @default(ACTIVE)
+  defaultViewSettings Json?           @map("default_view_settings")
+  createdAt           DateTime        @default(now()) @map("created_at") @db.Timestamp(0)
+  updatedAt           DateTime        @default(now()) @updatedAt @map("updated_at") @db.Timestamp(0)
+  members             ProjectMember[]
+  owner               User            @relation("ProjectOwner", fields: [ownerId], references: [id], map: "projects_owner_id_fk")
+  repositories        Repository[]
+  tasks               Task[]
+
+  @@index([ownerId], map: "projects_owner_id_fk")
+  @@map("projects")
+}
+
+model ProjectMember {
+  projectId            Int         @map("project_id")
+  userId               Int         @map("user_id")
+  role                 ProjectRole @default(DEVELOPER)
+  joinedAt             DateTime    @default(now()) @map("joined_at") @db.Timestamp(0)
+  personalViewSettings Json?       @map("personal_view_settings")
+  project              Project     @relation(fields: [projectId], references: [id], onDelete: Cascade, map: "project_members_project_id_fk")
+  user                 User        @relation(fields: [userId], references: [id], onDelete: Cascade, map: "project_members_user_id_fk")
+
+  @@id([projectId, userId])
+  @@index([userId], map: "project_members_user_id_fk")
+  @@map("project_members")
+}
+
+model Repository {
+  id           Int      @id @default(autoincrement())
+  projectId    Int      @map("project_id")
+  githubRepoId Int      @map("github_repo_id")
+  accessToken  String?  @map("access_token") @db.VarChar(255)
+  connectedAt  DateTime @default(now()) @map("connected_at") @db.Timestamp(0)
+  project      Project  @relation(fields: [projectId], references: [id], onDelete: Cascade, map: "repositories_project_id_fk")
+
+  @@index([projectId], map: "repositories_project_id_fk")
+  @@map("repositories")
+}
+
+model Task {
+  id               Int              @id @default(autoincrement())
+  projectId        Int              @map("project_id")
+  title            String           @db.VarChar(100)
+  description      String?          @db.Text
+  assigneeId       Int?             @map("assignee_id")
+  reporterId       Int              @map("reporter_id")
+  status           TaskStatus       @default(TO_DO)
+  priority         TaskPriority     @default(MEDIUM)
+  githubCommitHash String?          @map("github_commit_hash") @db.VarChar(255)
+  linesOfCode      Int?             @map("lines_of_code")
+  createdAt        DateTime         @default(now()) @map("created_at") @db.Timestamp(0)
+  updatedAt        DateTime         @default(now()) @updatedAt @map("updated_at") @db.Timestamp(0)
+  analysisReports  AnalysisReport[]
+  comments         Comment[]
+  assignee         User?            @relation("TaskAssignee", fields: [assigneeId], references: [id], map: "tasks_assignee_id_fk")
+  project          Project          @relation(fields: [projectId], references: [id], onDelete: Cascade, map: "tasks_project_id_fk")
+  reporter         User             @relation("TaskReporter", fields: [reporterId], references: [id], map: "tasks_reporter_id_fk")
+
+  @@index([projectId], map: "tasks_project_id_fk")
+  @@index([assigneeId], map: "tasks_assignee_id_fk")
+  @@index([reporterId], map: "tasks_reporter_id_fk")
+  @@map("tasks")
+}
+
+model Comment {
+  id        Int      @id @default(autoincrement())
+  taskId    Int      @map("task_id")
+  userId    Int      @map("user_id")
+  content   String   @db.Text
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamp(0)
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamp(0)
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade, map: "comments_task_id_fk")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade, map: "comments_user_id_fk")
+
+  @@index([taskId], map: "comments_task_id_fk")
+  @@index([userId], map: "comments_user_id_fk")
+  @@map("comments")
+}
+
+model AnalysisReport {
+  id                 Int            @id @default(autoincrement())
+  taskId             Int            @map("task_id")
+  analyzedCommitHash String         @map("analyzed_commit_hash") @db.VarChar(255)
+  qualityScore       Int?           @map("quality_score")
+  decision           ReportDecision @default(PENDING)
+  analyzedAt         DateTime       @default(now()) @map("created_at") @db.Timestamp(0)
+  task               Task           @relation(fields: [taskId], references: [id], onDelete: Cascade, map: "analysis_reports_task_id_fk")
+  defects            Defect[]
+
+  @@index([taskId], map: "analysis_reports_task_id_fk")
+  @@map("analysis_reports")
+}
+
+model Defect {
+  id            Int            @id @default(autoincrement())
+  reportId      Int            @map("report_id")
+  ruleType      RuleType       @map("rule_type")
+  message       String         @db.Text
+  filePath      String?        @map("file_path") @db.VarChar(255)
+  lineNumber    Int?           @map("line_number")
+  severity      DefectSeverity
+  penaltyPoints Int            @map("penalty_points")
+  report        AnalysisReport @relation(fields: [reportId], references: [id], onDelete: Cascade, map: "defects_report_id_fk")
+
+  @@index([reportId], map: "defects_report_id_fk")
+  @@map("defects")
+}
+
+enum ProjectRole {
+  ADMIN     @map("admin")
+  MANAGER   @map("manager")
+  DEVELOPER @map("developer")
+  QA        @map("qa")
+}
+
+enum ProjectStatus {
+  ACTIVE   @map("active")
+  ARCHIVED @map("archived")
+}
+
+enum TaskStatus {
+  TO_DO            @map("to_do")
+  IN_PROGRESS      @map("in_progress")
+  READY_FOR_DEPLOY @map("ready_for_deploy")
+  QA               @map("qa")
+  PM_APPROVING     @map("pm_approving")
+  DONE             @map("done")
+}
+
+enum TaskPriority {
+  LOW      @map("low")
+  MEDIUM   @map("medium")
+  HIGH     @map("high")
+  CRITICAL @map("critical")
+}
+
+enum ReportDecision {
+  PENDING  @map("pending")
+  APPROVED @map("approved")
+  REJECTED @map("rejected")
+}
+
+enum DefectSeverity {
+  WARNING @map("warning")
+  ERROR   @map("error")
+}
+
+enum RuleType {
+  STYLE         @map("style")
+  SECURITY      @map("security")
+  PERFORMANCE   @map("performance")
+  BEST_PRACTICE @map("best_practice")
+}
