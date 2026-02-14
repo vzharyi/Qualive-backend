@@ -18,15 +18,25 @@ export class EslintService {
 
     constructor() {
         this.eslint = new ESLint({
-            overrideConfigFile: null as any,
+            // overrideConfigFile: true as any, // Removed to fix TS error
+            // useEslintrc: false, // Removed invalid property
             overrideConfig: {
                 languageOptions: {
-                    ecmaVersion: 2021,
-                    sourceType: 'module',
+                    parser: require('@typescript-eslint/parser'),
+                    parserOptions: {
+                        ecmaVersion: 2021,
+                        sourceType: 'module',
+                        project: false, // Explicitly disable project
+                        projectService: false, // Explicitly disable project service
+                        tsconfigRootDir: undefined, // Ensure no root dir is set
+                    },
+                },
+                plugins: {
+                    '@typescript-eslint': require('@typescript-eslint/eslint-plugin'),
                 },
                 rules: {
-                    'no-unused-vars': 'error',
-                    'no-undef': 'error',
+                    'no-unused-vars': 'off',
+                    '@typescript-eslint/no-unused-vars': 'warn', // Downgraded to warn to avoid noise
                     'no-console': 'warn',
                     'no-debugger': 'error',
                 },
@@ -64,7 +74,9 @@ export class EslintService {
 
             return defects;
         } catch (error) {
-            this.logger.error(`ESLint analysis failed for ${filename}: ${error.message}`);
+            this.logger.error(
+                `ESLint analysis failed for ${filename}: ${error.message}`,
+            );
             return [];
         }
     }

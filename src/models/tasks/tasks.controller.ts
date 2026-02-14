@@ -31,24 +31,7 @@ import { TaskStatus, TaskPriority } from '@prisma/client';
 export class TasksController {
     constructor(private readonly tasksService: TasksService) { }
 
-    @Post()
-    @ApiOperation({ summary: 'Create new task' })
-    @ApiResponse({
-        status: HttpStatus.CREATED,
-        description: 'Task created successfully. Status is TO_DO by default.',
-        type: Task,
-    })
-    @ApiResponse({
-        status: HttpStatus.FORBIDDEN,
-        description: 'You are not a member of this project',
-    })
-    @ApiResponse({
-        status: HttpStatus.BAD_REQUEST,
-        description: 'Assignee is not a member of this project',
-    })
-    create(@Body() createTaskDto: CreateTaskDto, @UserId() userId: number) {
-        return this.tasksService.create(createTaskDto, userId);
-    }
+
 
     @Get()
     @ApiOperation({ summary: 'Get tasks with filters and sorting' })

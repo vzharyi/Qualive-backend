@@ -1,3 +1,4 @@
+import { plainToInstance } from 'class-transformer';
 import {
   Injectable,
   NotFoundException,
@@ -11,6 +12,9 @@ import { UpdateProjectDto } from './dto/update-project.dto';
 import { AddMemberDto } from './dto/add-member.dto';
 import { ProjectsRepository } from './projects.repository';
 import { UsersService } from '../users/users.service';
+import { Project } from './entities/project.entity';
+import { ProjectMember } from './entities/project-member.entity';
+import { SERIALIZATION_GROUPS } from '../users/entities/user.entity';
 
 @Injectable()
 export class ProjectsService {
@@ -33,7 +37,12 @@ export class ProjectsService {
 
   /** Get all projects for current user */
   async findAll(userId: number) {
-    return this.repository.findUserProjects(userId);
+    const projects = await this.repository.findUserProjects(userId);
+    return projects.map((project) =>
+      plainToInstance(Project, project, {
+        groups: SERIALIZATION_GROUPS.PROJECT,
+      }),
+    );
   }
 
   /** Get project by ID with full information */
@@ -44,13 +53,19 @@ export class ProjectsService {
       throw new NotFoundException(`Project with ID ${id} not found`);
     }
 
-    return project;
+    return plainToInstance(Project, project, {
+      groups: SERIALIZATION_GROUPS.PROJECT,
+    });
   }
 
   /** Update project */
   async update(id: number, updateProjectDto: UpdateProjectDto) {
     await this.findOne(id);
-    return this.repository.update(id, updateProjectDto);
+    const updatedProject = await this.repository.update(id, updateProjectDto);
+
+    return plainToInstance(Project, updatedProject, {
+      groups: SERIALIZATION_GROUPS.PROJECT,
+    });
   }
 
   /** Delete project */
@@ -81,7 +96,11 @@ export class ProjectsService {
       throw new ConflictException('User is already a member of this project');
     }
 
-    return this.repository.addMember(projectId, user.id, addMemberDto.role);
+    const newMember = await this.repository.addMember(projectId, user.id, addMemberDto.role);
+
+    return plainToInstance(ProjectMember, newMember, {
+      groups: SERIALIZATION_GROUPS.PROJECT,
+    });
   }
 
   /** Remove member from project */

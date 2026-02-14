@@ -24,12 +24,5 @@ export class UpdateTaskDto extends PartialType(CreateTaskDto) {
     @IsOptional()
     githubCommitHash?: string;
 
-    @ApiProperty({
-        description: 'Lines of code in the commit',
-        example: 150,
-        required: false,
-    })
-    @IsNumber()
-    @IsOptional()
-    linesOfCode?: number;
+
 }

@@ -5,6 +5,7 @@ export const SERIALIZATION_GROUPS = {
   BASIC: ['basic'],
   CONFIDENTIAL: ['basic', 'confidential'],
   PRIVATE: ['basic', 'confidential', 'private'],
+  PROJECT: ['basic', 'project'],
 };
 
 export class User implements PrismaUser {
@@ -14,7 +15,7 @@ export class User implements PrismaUser {
   @Expose({ groups: ['basic'] })
   login: string;
 
-  @Expose({ groups: ['confidential'] })
+  @Expose({ groups: ['confidential', 'project'] })
   email: string;
 
   @Expose({ groups: ['private'] })

@@ -7,8 +7,11 @@ import { ProjectOwnerGuard } from './guards/project-owner.guard';
 import { PrismaModule } from '../../prisma/prisma.module';
 import { UsersModule } from '../users/users.module';
 
+import { TasksModule } from '../tasks/tasks.module';
+import { forwardRef } from '@nestjs/common';
+
 @Module({
-  imports: [PrismaModule, UsersModule],
+  imports: [PrismaModule, UsersModule, forwardRef(() => TasksModule)],
   controllers: [ProjectsController],
   providers: [
     ProjectsService,

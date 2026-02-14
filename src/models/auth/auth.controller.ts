@@ -7,6 +7,8 @@ import { Public } from './decorators/public.decorator';
 import { LoginDto } from './dto/login.dto';
 import { AuthResponseDto } from './dto/auth-response.dto';
 import { UsersService } from '../users/users.service';
+import { CreateUserDto } from '../users/dto/create-user.dto';
+import { User } from '../users/entities/user.entity';
 
 @Controller('auth')
 @ApiTags('Authentication')
@@ -40,6 +42,23 @@ export class AuthController {
     async login(@Body() loginDto: LoginDto): Promise<AuthResponseDto> {
         const user = await this.usersService.findUserByLogin(loginDto.login);
         return this.authService.login(user);
+    }
+
+    @Public()
+    @Post('register')
+    @ApiOperation({ summary: 'Register new user' })
+    @ApiBody({ type: CreateUserDto })
+    @ApiResponse({
+        status: HttpStatus.CREATED,
+        description: 'User successfully registered',
+        type: User,
+    })
+    @ApiResponse({
+        status: HttpStatus.BAD_REQUEST,
+        description: 'Invalid input data',
+    })
+    async register(@Body() createUserDto: CreateUserDto) {
+        return this.usersService.create(createUserDto);
     }
 
     @Public()

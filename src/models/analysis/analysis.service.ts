@@ -26,6 +26,7 @@ export class AnalysisService {
     ) { }
 
     /** Run code quality analysis for a task */
+    /** Run code quality analysis for a task */
     async analyzeTask(taskId: number, userId: number) {
         this.logger.log(`Starting analysis for task ${taskId}`);
 
@@ -34,12 +35,6 @@ export class AnalysisService {
         if (!task.githubCommitHash) {
             throw new BadRequestException(
                 'Task has no GitHub commit linked. Please add githubCommitHash to the task.',
-            );
-        }
-
-        if (!task.linesOfCode) {
-            throw new BadRequestException(
-                'Task has no linesOfCode specified. Please add linesOfCode to the task.',
             );
         }
 
@@ -60,8 +55,11 @@ export class AnalysisService {
             repo.id,
         );
 
-        const owner = 'owner';
-        const repoName = 'repo';
+        const { owner, repo: repoName } =
+            await this.githubService.getRepoDetailsById(
+                repo.githubRepoId,
+                accessToken || undefined,
+            );
 
         this.logger.log(
             `Fetching commit ${task.githubCommitHash} from ${owner}/${repoName}`,
@@ -78,7 +76,7 @@ export class AnalysisService {
 
         if (files.length === 0) {
             throw new BadRequestException(
-                'No JavaScript/TypeScript files found in this commit',
+                'No supported files (JS/TS/Vue/HTML/CSS) found in this commit',
             );
         }
 
@@ -93,11 +91,16 @@ export class AnalysisService {
             allDefects.push(...defects);
         }
 
+        const totalLinesOfCode = files.reduce((sum, file) => {
+            return sum + (file.additions || 0);
+        }, 0);
+
         this.logger.log(`Total defects found: ${allDefects.length}`);
+        this.logger.log(`Total lines of code: ${totalLinesOfCode}`);
 
         const qualityScore = this.scoringService.calculateQualityScore(
             allDefects,
-            task.linesOfCode,
+            totalLinesOfCode,
         );
 
         const decision = this.scoringService.getDecision(qualityScore);
@@ -131,7 +134,17 @@ export class AnalysisService {
 
         this.logger.log(`Analysis complete. Report ID: ${report.id}`);
 
-        return this.repository.findById(report.id);
+        const savedReport = await this.repository.findById(report.id);
+
+        return {
+            ...savedReport,
+            analyzedFiles: files.map((f) => ({
+                filename: f.filename,
+                content: f.content, // Include content for debugging
+                additions: f.additions,
+                deletions: f.deletions,
+            })),
+        };
     }
 
     /** Get analysis reports for a task */

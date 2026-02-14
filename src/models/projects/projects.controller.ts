@@ -21,11 +21,41 @@ import { UserId } from '../auth/decorators/user-id.decorator';
 import { Project } from './entities/project.entity';
 import { ProjectMember } from './entities/project-member.entity';
 
+import { TasksService } from '../tasks/tasks.service';
+import { CreateTaskInProjectDto } from './dto/create-task-in-project.dto';
+import { Task } from '../tasks/entities/task.entity';
+
 @Controller('projects')
 @ApiTags('Projects')
 @ApiBearerAuth()
 export class ProjectsController {
-  constructor(private readonly projectsService: ProjectsService) { }
+  constructor(
+    private readonly projectsService: ProjectsService,
+    private readonly tasksService: TasksService,
+  ) { }
+
+  @Post(':id/tasks')
+  @UseGuards(ProjectMemberGuard)
+  @ApiOperation({ summary: 'Create new task in project' })
+  @ApiResponse({
+    status: HttpStatus.CREATED,
+    description: 'Task created successfully',
+    type: Task,
+  })
+  @ApiResponse({
+    status: HttpStatus.FORBIDDEN,
+    description: 'User is not a member of this project',
+  })
+  createTask(
+    @Param('id', ParseIntPipe) projectId: number,
+    @Body() createTaskDto: CreateTaskInProjectDto,
+    @UserId() userId: number,
+  ) {
+    return this.tasksService.create(
+      { ...createTaskDto, projectId },
+      userId,
+    );
+  }
 
   @Post()
   @ApiOperation({ summary: 'Create new project' })

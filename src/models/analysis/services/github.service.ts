@@ -7,6 +7,7 @@ export interface CommitFile {
     additions: number;
     deletions: number;
     changes: number;
+    patch?: string;
 }
 
 @Injectable()
@@ -37,7 +38,9 @@ export class GithubService {
 
             const jstsFiles =
                 commit.files?.filter((file) =>
-                    /\.(js|jsx|ts|tsx)$/.test(file.filename),
+                    /\.(js|jsx|ts|tsx|vue|html|css|scss|less|mjs|cjs)$/.test(
+                        file.filename,
+                    ),
                 ) || [];
 
             this.logger.log(`Found ${jstsFiles.length} JS/TS files`);
@@ -63,6 +66,7 @@ export class GithubService {
                             additions: file.additions || 0,
                             deletions: file.deletions || 0,
                             changes: file.changes || 0,
+                            patch: file.patch, // capturing the patch info
                         };
                     } catch (error) {
                         this.logger.warn(
@@ -119,5 +123,30 @@ export class GithubService {
         }
 
         throw new Error('Invalid GitHub URL format');
+    }
+    /** Get repository details by GitHub Repo ID */
+    async getRepoDetailsById(
+        id: number,
+        accessToken?: string,
+    ): Promise<{ owner: string; repo: string }> {
+        const octokit = accessToken
+            ? new Octokit({ auth: accessToken })
+            : new Octokit();
+
+        try {
+            const { data } = await octokit.request('GET /repositories/{id}', {
+                id,
+            });
+
+            return {
+                owner: data.owner.login,
+                repo: data.name,
+            };
+        } catch (error) {
+            this.logger.error(
+                `Failed to fetch repo details for ID ${id}: ${error.message}`,
+            );
+            throw new Error(`GitHub API error: ${error.message}`);
+        }
     }
 }

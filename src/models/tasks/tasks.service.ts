@@ -10,6 +10,9 @@ import { UpdateTaskDto } from './dto/update-task.dto';
 import { FilterTaskDto } from './dto/filter-task.dto';
 import { TasksRepository } from './tasks.repository';
 import { ProjectsService } from '../projects/projects.service';
+import { plainToInstance } from 'class-transformer';
+import { Task } from './entities/task.entity';
+import { SERIALIZATION_GROUPS } from '../users/entities/user.entity';
 
 @Injectable()
 export class TasksService {
@@ -42,11 +45,15 @@ export class TasksService {
             }
         }
 
-        return this.repository.create({
+        const newTask = await this.repository.create({
             ...createTaskDto,
             reporterId: userId,
             status: TaskStatus.TO_DO,
             priority: createTaskDto.priority || TaskPriority.MEDIUM,
+        });
+
+        return plainToInstance(Task, newTask, {
+            groups: SERIALIZATION_GROUPS.PROJECT,
         });
     }
 
@@ -61,7 +68,13 @@ export class TasksService {
             throw new ForbiddenException('You are not a member of this project');
         }
 
-        return this.repository.findAll(filters);
+        const tasks = await this.repository.findAll(filters);
+
+        return tasks.map((task) =>
+            plainToInstance(Task, task, {
+                groups: SERIALIZATION_GROUPS.PROJECT,
+            }),
+        );
     }
 
     /** Get task by ID */
@@ -81,7 +94,9 @@ export class TasksService {
             throw new ForbiddenException('Access denied');
         }
 
-        return task;
+        return plainToInstance(Task, task, {
+            groups: SERIALIZATION_GROUPS.PROJECT,
+        });
     }
 
     /** Update task (status, assignee, GitHub commit, etc.) */
@@ -105,7 +120,11 @@ export class TasksService {
 
         const { projectId, ...updateData } = updateTaskDto as any;
 
-        return this.repository.update(id, updateData);
+        const updatedTask = await this.repository.update(id, updateData);
+
+        return plainToInstance(Task, updatedTask, {
+            groups: SERIALIZATION_GROUPS.PROJECT,
+        });
     }
 
     /** Delete task */
