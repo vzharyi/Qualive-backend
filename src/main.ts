@@ -29,6 +29,7 @@ async function bootstrap() {
     .addTag('Users', 'User management')
     .addTag('Projects', 'Project management')
     .addTag('Tasks', 'Task management (Kanban)')
+    .addTag('Comments', 'Task comments and discussion')
     .addTag('Repositories', 'GitHub repository integration')
     .addTag('Analysis', 'Code quality analysis')
     .build();
@@ -38,7 +39,7 @@ async function bootstrap() {
 
   const port = process.env.PORT ?? 8080;
   await app.listen(port);
-  console.log(`🚀 Server running on http://localhost:${port}`);
+  console.log(`🚀 Server running on http://localhost:${port}/api`);
   console.log(`📚 Swagger docs: http://localhost:${port}/api/docs`);
 }
 bootstrap();

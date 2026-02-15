@@ -7,6 +7,7 @@ import { TasksModule } from './models/tasks/tasks.module';
 import { AuthModule } from './models/auth/auth.module';
 import { RepositoriesModule } from './models/repositories/repositories.module';
 import { AnalysisModule } from './models/analysis/analysis.module';
+import { CommentsModule } from './models/comments/comments.module';
 import { JwtAuthGuard } from './models/auth/guards/jwt-auth.guard';
 
 @Module({
@@ -18,6 +19,7 @@ import { JwtAuthGuard } from './models/auth/guards/jwt-auth.guard';
     AuthModule,
     RepositoriesModule,
     AnalysisModule,
+    CommentsModule,
   ],
   providers: [
     {

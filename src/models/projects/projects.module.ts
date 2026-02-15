@@ -4,6 +4,7 @@ import { ProjectsController } from './projects.controller';
 import { ProjectsRepository } from './projects.repository';
 import { ProjectMemberGuard } from './guards/project-member.guard';
 import { ProjectOwnerGuard } from './guards/project-owner.guard';
+import { RolesGuard } from './guards/roles.guard';
 import { PrismaModule } from '../../prisma/prisma.module';
 import { UsersModule } from '../users/users.module';
 
@@ -18,7 +19,13 @@ import { forwardRef } from '@nestjs/common';
     ProjectsRepository,
     ProjectMemberGuard,
     ProjectOwnerGuard,
+    RolesGuard,
   ],
-  exports: [ProjectsService],
+  exports: [
+    ProjectsService,
+    ProjectsRepository,
+    ProjectMemberGuard,
+    RolesGuard,
+  ],
 })
 export class ProjectsModule { }

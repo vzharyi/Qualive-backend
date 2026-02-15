@@ -9,6 +9,7 @@ import {
     Query,
     ParseIntPipe,
     HttpStatus,
+    UseGuards,
 } from '@nestjs/common';
 import {
     ApiTags,
@@ -23,7 +24,9 @@ import { UpdateTaskDto } from './dto/update-task.dto';
 import { FilterTaskDto } from './dto/filter-task.dto';
 import { UserId } from '../auth/decorators/user-id.decorator';
 import { Task } from './entities/task.entity';
-import { TaskStatus, TaskPriority } from '@prisma/client';
+import { TaskStatus, TaskPriority, ProjectRole } from '@prisma/client';
+import { RolesGuard } from '../projects/guards/roles.guard';
+import { Roles } from '../projects/decorators/roles.decorator';
 
 @Controller('tasks')
 @ApiTags('Tasks')
@@ -100,6 +103,8 @@ export class TasksController {
     }
 
     @Delete(':id')
+    @UseGuards(RolesGuard)
+    @Roles(ProjectRole.ADMIN, ProjectRole.MANAGER, ProjectRole.DEVELOPER)
     @ApiOperation({ summary: 'Delete task' })
     @ApiResponse({
         status: HttpStatus.OK,

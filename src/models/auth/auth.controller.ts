@@ -11,7 +11,7 @@ import { CreateUserDto } from '../users/dto/create-user.dto';
 import { User } from '../users/entities/user.entity';
 
 @Controller('auth')
-@ApiTags('Authentication')
+@ApiTags('Auth')
 export class AuthController {
     constructor(
         private authService: AuthService,
