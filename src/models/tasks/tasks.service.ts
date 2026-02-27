@@ -4,7 +4,7 @@ import {
     ForbiddenException,
     BadRequestException,
 } from '@nestjs/common';
-import { TaskStatus, TaskPriority } from '@prisma/client';
+import { TaskPriority } from '@prisma/client';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
 import { FilterTaskDto } from './dto/filter-task.dto';
@@ -48,7 +48,6 @@ export class TasksService {
         const newTask = await this.repository.create({
             ...createTaskDto,
             reporterId: userId,
-            status: TaskStatus.TO_DO,
             priority: createTaskDto.priority || TaskPriority.MEDIUM,
         });
 
@@ -99,7 +98,7 @@ export class TasksService {
         });
     }
 
-    /** Update task (status, assignee, GitHub commit, etc.) */
+    /** Update task (column, assignee, GitHub commit, etc.) */
     async update(id: number, updateTaskDto: UpdateTaskDto, userId: number) {
         const task = await this.findOne(id, userId);
 

@@ -1,5 +1,18 @@
-import { IsString, IsNotEmpty, IsOptional } from 'class-validator';
+import { IsString, IsNotEmpty, IsOptional, IsArray, ValidateNested } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
+
+class CreateProjectColumnDto {
+    @ApiProperty({ example: 'To Do' })
+    @IsString()
+    @IsNotEmpty()
+    name: string;
+
+    @ApiProperty({ example: '#94a3b8', required: false })
+    @IsString()
+    @IsOptional()
+    color?: string;
+}
 
 export class CreateProjectDto {
     @ApiProperty({
@@ -27,4 +40,15 @@ export class CreateProjectDto {
     @IsString()
     @IsOptional()
     avatarUrl?: string;
+
+    @ApiProperty({
+        description: 'Custom board columns',
+        type: [CreateProjectColumnDto],
+        required: false,
+    })
+    @IsArray()
+    @IsOptional()
+    @ValidateNested({ each: true })
+    @Type(() => CreateProjectColumnDto)
+    columns?: CreateProjectColumnDto[];
 }

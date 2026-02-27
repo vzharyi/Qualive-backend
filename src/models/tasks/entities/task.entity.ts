@@ -1,7 +1,8 @@
-import { Task as PrismaTask, TaskStatus, TaskPriority } from '@prisma/client';
+import { Task as PrismaTask, TaskPriority } from '@prisma/client';
 import { Expose, Type } from 'class-transformer';
 import { User } from '../../users/entities/user.entity';
 import { Project } from '../../projects/entities/project.entity';
+import { Column } from '../../columns/entities/column.entity';
 
 export class Task implements PrismaTask {
     @Expose()
@@ -9,6 +10,9 @@ export class Task implements PrismaTask {
 
     @Expose()
     projectId: number;
+
+    @Expose()
+    columnId: number;
 
     @Expose()
     title: string;
@@ -21,9 +25,6 @@ export class Task implements PrismaTask {
 
     @Expose()
     reporterId: number;
-
-    @Expose()
-    status: TaskStatus;
 
     @Expose()
     priority: TaskPriority;
@@ -41,6 +42,10 @@ export class Task implements PrismaTask {
     updatedAt: Date;
 
     // Relations
+    @Expose()
+    @Type(() => Column)
+    column?: Column;
+
     @Expose()
     @Type(() => User)
     assignee?: User | null;

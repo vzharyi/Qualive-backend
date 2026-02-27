@@ -33,4 +33,10 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
 
         done(null, user);
     }
+
+    authorizationParams(): { [key: string]: string } {
+        return {
+            prompt: 'select_account',
+        };
+    }
 }

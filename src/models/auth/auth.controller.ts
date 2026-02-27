@@ -1,4 +1,5 @@
-import { Controller, Post, UseGuards, Body, HttpStatus, Get, Req } from '@nestjs/common';
+import { Controller, Post, UseGuards, Body, HttpStatus, Get, Req, Res } from '@nestjs/common';
+import type { Response } from 'express';
 import { ApiTags, ApiOperation, ApiResponse, ApiBody } from '@nestjs/swagger';
 import { AuthGuard } from '@nestjs/passport';
 import { AuthService } from './auth.service';
@@ -76,12 +77,13 @@ export class AuthController {
     @UseGuards(AuthGuard('google'))
     @ApiOperation({ summary: 'Google OAuth callback' })
     @ApiResponse({
-        status: HttpStatus.OK,
-        description: 'Successfully authenticated with Google',
-        type: AuthResponseDto,
+        status: HttpStatus.FOUND,
+        description: 'Redirects to frontend with token',
     })
-    async googleAuthCallback(@Req() req): Promise<AuthResponseDto> {
-        return this.authService.login(req.user);
+    async googleAuthCallback(@Req() req, @Res() res: Response) {
+        const authResponse = await this.authService.login(req.user);
+        const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+        return res.redirect(`${frontendUrl}/oauth-callback?token=${authResponse.accessToken}`);
     }
 
     @Public()
@@ -99,11 +101,12 @@ export class AuthController {
     @UseGuards(AuthGuard('github'))
     @ApiOperation({ summary: 'GitHub OAuth callback' })
     @ApiResponse({
-        status: HttpStatus.OK,
-        description: 'Successfully authenticated with GitHub',
-        type: AuthResponseDto,
+        status: HttpStatus.FOUND,
+        description: 'Redirects to frontend with token',
     })
-    async githubAuthCallback(@Req() req): Promise<AuthResponseDto> {
-        return this.authService.login(req.user);
+    async githubAuthCallback(@Req() req, @Res() res: Response) {
+        const authResponse = await this.authService.login(req.user);
+        const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+        return res.redirect(`${frontendUrl}/oauth-callback?token=${authResponse.accessToken}`);
     }
 }

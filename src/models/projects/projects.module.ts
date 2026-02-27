@@ -7,6 +7,7 @@ import { ProjectOwnerGuard } from './guards/project-owner.guard';
 import { RolesGuard } from './guards/roles.guard';
 import { PrismaModule } from '../../prisma/prisma.module';
 import { UsersModule } from '../users/users.module';
+import { ColumnsRepository } from '../columns/columns.repository';
 
 import { TasksModule } from '../tasks/tasks.module';
 import { forwardRef } from '@nestjs/common';
@@ -17,6 +18,7 @@ import { forwardRef } from '@nestjs/common';
   providers: [
     ProjectsService,
     ProjectsRepository,
+    ColumnsRepository,
     ProjectMemberGuard,
     ProjectOwnerGuard,
     RolesGuard,

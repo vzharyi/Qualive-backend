@@ -42,6 +42,7 @@ model Project {
   owner               User            @relation("ProjectOwner", fields: [ownerId], references: [id], map: "projects_owner_id_fk")
   repositories        Repository[]
   tasks               Task[]
+  columns             BoardColumn[]
 
   @@index([ownerId], map: "projects_owner_id_fk")
   @@map("projects")
@@ -73,14 +74,29 @@ model Repository {
   @@map("repositories")
 }
 
+model BoardColumn {
+  id        Int      @id @default(autoincrement())
+  projectId Int      @map("project_id")
+  name      String   @db.VarChar(100)
+  color     String?  @db.VarChar(50)
+  order     Int      @default(0)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamp(0)
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamp(0)
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade, map: "board_columns_project_id_fk")
+  tasks     Task[]
+
+  @@index([projectId], map: "board_columns_project_id_fk")
+  @@map("board_columns")
+}
+
 model Task {
   id               Int              @id @default(autoincrement())
   projectId        Int              @map("project_id")
+  columnId         Int              @map("column_id")
   title            String           @db.VarChar(100)
   description      String?          @db.Text
   assigneeId       Int?             @map("assignee_id")
   reporterId       Int              @map("reporter_id")
-  status           TaskStatus       @default(TO_DO)
   priority         TaskPriority     @default(MEDIUM)
   githubCommitHash String?          @map("github_commit_hash") @db.VarChar(255)
   linesOfCode      Int?             @map("lines_of_code")
@@ -89,10 +105,12 @@ model Task {
   analysisReports  AnalysisReport[]
   comments         Comment[]
   assignee         User?            @relation("TaskAssignee", fields: [assigneeId], references: [id], map: "tasks_assignee_id_fk")
+  column           BoardColumn      @relation(fields: [columnId], references: [id], map: "tasks_column_id_fk")
   project          Project          @relation(fields: [projectId], references: [id], onDelete: Cascade, map: "tasks_project_id_fk")
   reporter         User             @relation("TaskReporter", fields: [reporterId], references: [id], map: "tasks_reporter_id_fk")
 
   @@index([projectId], map: "tasks_project_id_fk")
+  @@index([columnId], map: "tasks_column_id_fk")
   @@index([assigneeId], map: "tasks_assignee_id_fk")
   @@index([reporterId], map: "tasks_reporter_id_fk")
   @@map("tasks")
@@ -152,15 +170,6 @@ enum ProjectRole {
 enum ProjectStatus {
   ACTIVE   @map("active")
   ARCHIVED @map("archived")
-}
-
-enum TaskStatus {
-  TO_DO            @map("to_do")
-  IN_PROGRESS      @map("in_progress")
-  READY_FOR_DEPLOY @map("ready_for_deploy")
-  QA               @map("qa")
-  PM_APPROVING     @map("pm_approving")
-  DONE             @map("done")
 }
 
 enum TaskPriority {

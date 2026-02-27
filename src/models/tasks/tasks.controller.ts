@@ -24,7 +24,7 @@ import { UpdateTaskDto } from './dto/update-task.dto';
 import { FilterTaskDto } from './dto/filter-task.dto';
 import { UserId } from '../auth/decorators/user-id.decorator';
 import { Task } from './entities/task.entity';
-import { TaskStatus, TaskPriority, ProjectRole } from '@prisma/client';
+import { TaskPriority, ProjectRole } from '@prisma/client';
 import { RolesGuard } from '../projects/guards/roles.guard';
 import { Roles } from '../projects/decorators/roles.decorator';
 
@@ -39,14 +39,14 @@ export class TasksController {
     @Get()
     @ApiOperation({ summary: 'Get tasks with filters and sorting' })
     @ApiQuery({ name: 'projectId', required: true, type: Number })
+    @ApiQuery({ name: 'columnId', required: false, type: Number })
     @ApiQuery({ name: 'assigneeId', required: false, type: Number })
     @ApiQuery({ name: 'reporterId', required: false, type: Number })
-    @ApiQuery({ name: 'status', required: false, enum: TaskStatus })
     @ApiQuery({ name: 'priority', required: false, enum: TaskPriority })
     @ApiQuery({
         name: 'sortBy',
         required: false,
-        enum: ['createdAt', 'priority', 'status', 'updatedAt'],
+        enum: ['createdAt', 'priority', 'updatedAt'],
     })
     @ApiQuery({ name: 'sortOrder', required: false, enum: ['asc', 'desc'] })
     @ApiResponse({

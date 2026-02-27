@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { Task } from './entities/task.entity';
 import { FilterTaskDto } from './dto/filter-task.dto';
-import { TaskStatus, TaskPriority } from '@prisma/client';
+import { TaskPriority } from '@prisma/client';
 
 @Injectable()
 export class TasksRepository {
@@ -12,6 +12,7 @@ export class TasksRepository {
         return this.prisma.task.create({
             data: data as any,
             include: {
+                column: true,
                 assignee: true,
                 reporter: true,
                 project: true,
@@ -23,6 +24,7 @@ export class TasksRepository {
         return this.prisma.task.findUnique({
             where: { id },
             include: {
+                column: true,
                 assignee: true,
                 reporter: true,
                 project: true,
@@ -33,9 +35,9 @@ export class TasksRepository {
     async findAll(filters: FilterTaskDto): Promise<Task[]> {
         const {
             projectId,
+            columnId,
             assigneeId,
             reporterId,
-            status,
             priority,
             sortBy,
             sortOrder,
@@ -43,16 +45,16 @@ export class TasksRepository {
 
         const where: any = { projectId };
 
+        if (columnId !== undefined) {
+            where.columnId = columnId;
+        }
+
         if (assigneeId !== undefined) {
             where.assigneeId = assigneeId;
         }
 
         if (reporterId !== undefined) {
             where.reporterId = reporterId;
-        }
-
-        if (status) {
-            where.status = status;
         }
 
         if (priority) {
@@ -69,6 +71,7 @@ export class TasksRepository {
         return this.prisma.task.findMany({
             where,
             include: {
+                column: true,
                 assignee: true,
                 reporter: true,
             },
@@ -81,6 +84,7 @@ export class TasksRepository {
             where: { id },
             data: data as any,
             include: {
+                column: true,
                 assignee: true,
                 reporter: true,
             },

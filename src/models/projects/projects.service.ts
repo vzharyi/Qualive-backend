@@ -6,7 +6,7 @@ import {
   BadRequestException,
   ForbiddenException,
 } from '@nestjs/common';
-import { ProjectRole } from '@prisma/client';
+import { ProjectStatus, ProjectRole } from '@prisma/client';
 import { CreateProjectDto } from './dto/create-project.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
 import { AddMemberDto } from './dto/add-member.dto';
@@ -15,24 +15,55 @@ import { UsersService } from '../users/users.service';
 import { Project } from './entities/project.entity';
 import { ProjectMember } from './entities/project-member.entity';
 import { SERIALIZATION_GROUPS } from '../users/entities/user.entity';
+import { ColumnsRepository } from '../columns/columns.repository';
+import { PrismaService } from '../../prisma/prisma.service';
+
+const DEFAULT_COLUMNS = [
+  { name: 'To Do', order: 0, color: null },
+  { name: 'In Progress', order: 1, color: null },
+  { name: 'Review', order: 2, color: null },
+  { name: 'Done', order: 3, color: null },
+];
 
 @Injectable()
 export class ProjectsService {
   constructor(
     private repository: ProjectsRepository,
     private usersService: UsersService,
+    private columnsRepository: ColumnsRepository,
+    private prisma: PrismaService,
   ) { }
 
   /** Create new project and automatically add creator as ADMIN in project_members */
-  async create(createProjectDto: CreateProjectDto, ownerId: number) {
-    const project = await this.repository.create({
-      ...createProjectDto,
-      ownerId,
+  async create(createProjectDto: CreateProjectDto, ownerId: number): Promise<Project> {
+    const { columns, ...projectData } = createProjectDto;
+
+    const project = await this.prisma.project.create({
+      data: {
+        ...projectData,
+        ownerId,
+        status: ProjectStatus.ACTIVE,
+      },
     });
 
     await this.repository.addMember(project.id, ownerId, ProjectRole.ADMIN);
 
-    return this.findOne(project.id);
+    // Create default columns for the project
+    const columnsToCreate = columns && columns.length > 0
+      ? columns.map((col, index) => ({
+        name: col.name,
+        color: col.color || '#94a3b8',
+        order: index,
+        projectId: project.id,
+      }))
+      : DEFAULT_COLUMNS.map((col) => ({
+        ...col,
+        projectId: project.id,
+      }));
+
+    await this.columnsRepository.createMany(project.id, columnsToCreate);
+
+    return project;
   }
 
   /** Get all projects for current user */
