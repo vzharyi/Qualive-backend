@@ -20,7 +20,7 @@ export class RepositoriesService {
     ) { }
 
     /** Link GitHub repository to project. Access token is encrypted before saving */
-    async create(createRepositoryDto: CreateRepositoryDto, userId: number) {
+    async create(createRepositoryDto: CreateRepositoryDto, userId: number, installationId?: bigint) {
         const isOwner = await this.projectsService.checkUserIsOwner(
             createRepositoryDto.projectId,
             userId,
@@ -33,7 +33,7 @@ export class RepositoriesService {
         }
 
         const existing = await this.repository.findByGithubRepoId(
-            createRepositoryDto.githubRepoId,
+            BigInt(createRepositoryDto.githubRepoId),
         );
 
         if (existing) {
@@ -51,7 +51,8 @@ export class RepositoriesService {
 
         return this.repository.create({
             projectId: createRepositoryDto.projectId,
-            githubRepoId: createRepositoryDto.githubRepoId,
+            githubRepoId: BigInt(createRepositoryDto.githubRepoId),
+            installationId: installationId || null,
             accessToken: encryptedToken,
         });
     }
@@ -111,10 +112,10 @@ export class RepositoriesService {
 
         if (
             updateRepositoryDto.githubRepoId &&
-            updateRepositoryDto.githubRepoId !== repo.githubRepoId
+            BigInt(updateRepositoryDto.githubRepoId) !== repo.githubRepoId
         ) {
             const existing = await this.repository.findByGithubRepoId(
-                updateRepositoryDto.githubRepoId,
+                BigInt(updateRepositoryDto.githubRepoId),
             );
 
             if (existing) {
@@ -125,6 +126,9 @@ export class RepositoriesService {
         }
 
         const updateData: any = { ...updateRepositoryDto };
+        if (updateRepositoryDto.githubRepoId) {
+            updateData.githubRepoId = BigInt(updateRepositoryDto.githubRepoId);
+        }
         if (updateRepositoryDto.accessToken) {
             updateData.accessToken = this.encryptionService.encrypt(
                 updateRepositoryDto.accessToken,
@@ -155,15 +159,28 @@ export class RepositoriesService {
     }
 
     /** Get decrypted access token. IMPORTANT: For internal use only! DO NOT expose via API! */
-    async getDecryptedToken(id: number): Promise<string | null> {
+    async getDecryptedToken(id: number): Promise<{ token: string | null; isInstallationToken: boolean }> {
         const repo = await this.repository.findById(id);
 
-        if (!repo || !repo.accessToken) {
-            return null;
+        if (!repo) {
+            return { token: null, isInstallationToken: false };
+        }
+
+        if (repo.installationId) {
+            // Если есть installationId, мы не можем расшифровать локальный accessToken,
+            // а должны получить Installation Token через GithubService интеграцию.
+            // Но мы находимся в RepositoriesService. Чтобы избежать циклической зависимости,
+            // мы вернём флажок, что это InstallationToken и вызывающая сторона (AnalysisService)
+            // сама запросит его в GithubService
+            return { token: repo.installationId.toString(), isInstallationToken: true };
+        }
+
+        if (!repo.accessToken) {
+            return { token: null, isInstallationToken: false };
         }
 
         try {
-            return this.encryptionService.decrypt(repo.accessToken);
+            return { token: this.encryptionService.decrypt(repo.accessToken), isInstallationToken: false };
         } catch (error) {
             throw new BadRequestException('Failed to decrypt access token');
         }

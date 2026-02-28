@@ -26,7 +26,7 @@ export class RepositoriesRepository {
         });
     }
 
-    async findByGithubRepoId(githubRepoId: number): Promise<Repository | null> {
+    async findByGithubRepoId(githubRepoId: bigint): Promise<Repository | null> {
         return this.prisma.repository.findFirst({
             where: { githubRepoId },
         });

@@ -1,5 +1,5 @@
 import { Repository as PrismaRepository } from '@prisma/client';
-import { Expose, Type } from 'class-transformer';
+import { Expose, Type, Transform } from 'class-transformer';
 import { Project } from '../../projects/entities/project.entity';
 
 export class Repository implements PrismaRepository {
@@ -10,7 +10,12 @@ export class Repository implements PrismaRepository {
     projectId: number;
 
     @Expose()
-    githubRepoId: number;
+    @Transform(({ value }) => (value ? value.toString() : value))
+    githubRepoId: bigint;
+
+    @Expose()
+    @Transform(({ value }) => (value ? value.toString() : value))
+    installationId: bigint | null;
 
     accessToken: string | null;
 

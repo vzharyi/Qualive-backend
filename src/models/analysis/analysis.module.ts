@@ -8,9 +8,10 @@ import { ScoringService } from './services/scoring.service';
 import { PrismaModule } from '../../prisma/prisma.module';
 import { TasksModule } from '../tasks/tasks.module';
 import { RepositoriesModule } from '../repositories/repositories.module';
+import { GithubModule } from '../github/github.module';
 
 @Module({
-    imports: [PrismaModule, TasksModule, RepositoriesModule],
+    imports: [PrismaModule, TasksModule, RepositoriesModule, GithubModule],
     controllers: [AnalysisController],
     providers: [
         AnalysisService,

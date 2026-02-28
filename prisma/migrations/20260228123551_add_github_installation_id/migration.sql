@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE `repositories` ADD COLUMN `installation_id` BIGINT NULL,
+    MODIFY `github_repo_id` BIGINT NOT NULL;

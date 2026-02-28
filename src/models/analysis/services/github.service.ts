@@ -126,7 +126,7 @@ export class GithubService {
     }
     /** Get repository details by GitHub Repo ID */
     async getRepoDetailsById(
-        id: number,
+        id: number | bigint,
         accessToken?: string,
     ): Promise<{ owner: string; repo: string }> {
         const octokit = accessToken
@@ -135,7 +135,7 @@ export class GithubService {
 
         try {
             const { data } = await octokit.request('GET /repositories/{id}', {
-                id,
+                id: Number(id),
             });
 
             return {

@@ -10,6 +10,7 @@ import { AnalysisModule } from './models/analysis/analysis.module';
 import { CommentsModule } from './models/comments/comments.module';
 import { ColumnsModule } from './models/columns/columns.module';
 import { JwtAuthGuard } from './models/auth/guards/jwt-auth.guard';
+import { GithubModule } from './models/github/github.module';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { JwtAuthGuard } from './models/auth/guards/jwt-auth.guard';
     AnalysisModule,
     CommentsModule,
     ColumnsModule,
+    GithubModule,
   ],
   providers: [
     {

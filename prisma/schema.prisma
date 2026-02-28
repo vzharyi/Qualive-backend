@@ -63,12 +63,13 @@ model ProjectMember {
 }
 
 model Repository {
-  id           Int      @id @default(autoincrement())
-  projectId    Int      @map("project_id")
-  githubRepoId Int      @map("github_repo_id")
-  accessToken  String?  @map("access_token") @db.VarChar(255)
-  connectedAt  DateTime @default(now()) @map("connected_at") @db.Timestamp(0)
-  project      Project  @relation(fields: [projectId], references: [id], onDelete: Cascade, map: "repositories_project_id_fk")
+  id             Int      @id @default(autoincrement())
+  projectId      Int      @map("project_id")
+  githubRepoId   BigInt   @map("github_repo_id")
+  installationId BigInt?  @map("installation_id")
+  accessToken    String?  @map("access_token") @db.VarChar(255)
+  connectedAt    DateTime @default(now()) @map("connected_at") @db.Timestamp(0)
+  project        Project  @relation(fields: [projectId], references: [id], onDelete: Cascade, map: "repositories_project_id_fk")
 
   @@index([projectId], map: "repositories_project_id_fk")
   @@map("repositories")

@@ -11,6 +11,7 @@ import { ScoringService } from './services/scoring.service';
 import { AnalysisRepository } from './analysis.repository';
 import { TasksService } from '../tasks/tasks.service';
 import { RepositoriesService } from '../repositories/repositories.service';
+import { GithubAppService } from '../github/github.service';
 
 @Injectable()
 export class AnalysisService {
@@ -23,6 +24,7 @@ export class AnalysisService {
         private repository: AnalysisRepository,
         private tasksService: TasksService,
         private repositoriesService: RepositoriesService,
+        private githubAppService: GithubAppService,
     ) { }
 
     /** Run code quality analysis for a task */
@@ -51,14 +53,19 @@ export class AnalysisService {
 
         const repo = repositories[0];
 
-        const accessToken = await this.repositoriesService.getDecryptedToken(
+        const accessTokenResult = await this.repositoriesService.getDecryptedToken(
             repo.id,
         );
+
+        let tokenToUse = accessTokenResult.token;
+        if (accessTokenResult.isInstallationToken && tokenToUse) {
+            tokenToUse = await this.githubAppService.getInstallationToken(BigInt(tokenToUse));
+        }
 
         const { owner, repo: repoName } =
             await this.githubService.getRepoDetailsById(
                 repo.githubRepoId,
-                accessToken || undefined,
+                tokenToUse || undefined,
             );
 
         this.logger.log(
@@ -69,7 +76,7 @@ export class AnalysisService {
             owner,
             repoName,
             task.githubCommitHash,
-            accessToken || undefined,
+            tokenToUse || undefined,
         );
 
         this.logger.log(`Found ${files.length} files to analyze`);
