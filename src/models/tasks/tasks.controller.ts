@@ -113,4 +113,27 @@ export class TasksController {
     remove(@Param('id', ParseIntPipe) id: number, @UserId() userId: number) {
         return this.tasksService.remove(id, userId);
     }
+
+    @Delete('column/:columnId')
+    @UseGuards(RolesGuard)
+    @Roles(ProjectRole.ADMIN)
+    @ApiOperation({ summary: 'Delete all tasks in a column (Owner/Admin only)' })
+    @ApiResponse({
+        status: HttpStatus.OK,
+        description: 'All tasks in the column deleted successfully',
+    })
+    @ApiResponse({
+        status: HttpStatus.FORBIDDEN,
+        description: 'Only the project owner can delete all tasks in a column',
+    })
+    @ApiResponse({
+        status: HttpStatus.NOT_FOUND,
+        description: 'Column not found',
+    })
+    removeAllInColumn(
+        @Param('columnId', ParseIntPipe) columnId: number,
+        @UserId() userId: number,
+    ) {
+        return this.tasksService.deleteAllInColumn(columnId, userId);
+    }
 }

@@ -28,7 +28,7 @@ export class Task implements PrismaTask {
     reporterId: number;
 
     @Expose()
-    priority: TaskPriority;
+    priority: TaskPriority | null;
 
     @Expose()
     order: number;

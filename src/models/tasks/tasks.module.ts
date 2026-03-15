@@ -4,9 +4,10 @@ import { TasksController } from './tasks.controller';
 import { TasksRepository } from './tasks.repository';
 import { PrismaModule } from '../../prisma/prisma.module';
 import { ProjectsModule } from '../projects/projects.module';
+import { ColumnsModule } from '../columns/columns.module';
 
 @Module({
-    imports: [PrismaModule, forwardRef(() => ProjectsModule)],
+    imports: [PrismaModule, forwardRef(() => ProjectsModule), ColumnsModule],
     controllers: [TasksController],
     providers: [TasksService, TasksRepository],
     exports: [TasksService],

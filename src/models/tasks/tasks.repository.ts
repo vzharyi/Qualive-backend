@@ -100,4 +100,10 @@ export class TasksRepository {
             where: { id },
         });
     }
+
+    async deleteAllInColumn(columnId: number): Promise<void> {
+        await this.prisma.task.deleteMany({
+            where: { columnId },
+        });
+    }
 }

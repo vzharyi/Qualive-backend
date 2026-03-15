@@ -10,6 +10,7 @@ import { UpdateTaskDto } from './dto/update-task.dto';
 import { FilterTaskDto } from './dto/filter-task.dto';
 import { TasksRepository } from './tasks.repository';
 import { ProjectsService } from '../projects/projects.service';
+import { ColumnsRepository } from '../columns/columns.repository';
 import { plainToInstance } from 'class-transformer';
 import { Task } from './entities/task.entity';
 import { SERIALIZATION_GROUPS } from '../users/entities/user.entity';
@@ -19,6 +20,7 @@ export class TasksService {
     constructor(
         private repository: TasksRepository,
         private projectsService: ProjectsService,
+        private columnsRepository: ColumnsRepository,
     ) { }
 
     /** Create new task with reporter set automatically from userId */
@@ -48,7 +50,6 @@ export class TasksService {
         const newTask = await this.repository.create({
             ...createTaskDto,
             reporterId: userId,
-            priority: createTaskDto.priority || TaskPriority.MEDIUM,
         });
 
         return plainToInstance(Task, newTask, {
@@ -130,5 +131,26 @@ export class TasksService {
     async remove(id: number, userId: number) {
         await this.findOne(id, userId);
         await this.repository.delete(id);
+    }
+
+    /** Delete all tasks in column - OWNER (ADMIN) ONLY */
+    async deleteAllInColumn(columnId: number, userId: number) {
+        const column = await this.columnsRepository.findById(columnId);
+        if (!column) {
+            throw new NotFoundException(`Column with ID ${columnId} not found`);
+        }
+
+        const isOwner = await this.projectsService.checkUserIsOwner(
+            column.projectId,
+            userId,
+        );
+
+        if (!isOwner) {
+            throw new ForbiddenException(
+                'Only the project owner can delete all tasks in a column',
+            );
+        }
+
+        await this.repository.deleteAllInColumn(columnId);
     }
 }
