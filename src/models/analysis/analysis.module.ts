@@ -20,6 +20,6 @@ import { GithubModule } from '../github/github.module';
         EslintService,
         ScoringService,
     ],
-    exports: [AnalysisService],
+    exports: [AnalysisService, GithubService],
 })
 export class AnalysisModule { }

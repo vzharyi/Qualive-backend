@@ -40,4 +40,9 @@ export class CreateTaskDto {
     @IsEnum(TaskPriority)
     @IsOptional()
     priority?: TaskPriority;
+
+    @ApiProperty({ description: 'Task order (used for manual sorting)', example: 1, required: false })
+    @IsNumber()
+    @IsOptional()
+    order?: number;
 }

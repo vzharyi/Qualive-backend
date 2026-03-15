@@ -4,7 +4,7 @@ import {
     BadRequestException,
     Logger,
 } from '@nestjs/common';
-import { RuleType } from '@prisma/client';
+import { GithubItemType, RuleType } from '@prisma/client';
 import { GithubService } from './services/github.service';
 import { EslintService, DefectInfo } from './services/eslint.service';
 import { ScoringService } from './services/scoring.service';
@@ -12,6 +12,7 @@ import { AnalysisRepository } from './analysis.repository';
 import { TasksService } from '../tasks/tasks.service';
 import { RepositoriesService } from '../repositories/repositories.service';
 import { GithubAppService } from '../github/github.service';
+import { Octokit } from '@octokit/rest';
 
 @Injectable()
 export class AnalysisService {
@@ -27,99 +28,54 @@ export class AnalysisService {
         private githubAppService: GithubAppService,
     ) { }
 
-    /** Run code quality analysis for a task */
-    /** Run code quality analysis for a task */
-    async analyzeTask(taskId: number, userId: number) {
-        this.logger.log(`Starting analysis for task ${taskId}`);
+    /**
+     * Analyze a TaskGithubItem (PR or Commit).
+     * Returns quality score (0–100) or null if nothing to analyze.
+     */
+    async analyzeGithubItem(
+        item: { id: number; taskId: number; type: GithubItemType; githubId: string },
+        projectId: number,
+        userId: number,
+    ): Promise<number | null> {
+        this.logger.log(`Analyzing GitHub item #${item.id} (${item.type}: ${item.githubId})`);
 
-        const task = await this.tasksService.findOne(taskId, userId);
+        const { owner, repoName, token } = await this.resolveRepoContext(projectId, userId);
 
-        if (!task.githubCommitHash) {
-            throw new BadRequestException(
-                'Task has no GitHub commit linked. Please add githubCommitHash to the task.',
-            );
+        let files;
+        const analyzedRef = item.githubId;
+
+        if (item.type === GithubItemType.PULL_REQUEST) {
+            files = await this.getPrFiles(owner, repoName, Number(item.githubId), token);
+        } else {
+            files = await this.githubService.getCommitFiles(owner, repoName, item.githubId, token);
         }
-
-        const repositories = await this.repositoriesService.findAll(
-            task.projectId,
-            userId,
-        );
-
-        if (repositories.length === 0) {
-            throw new NotFoundException(
-                'No repository linked to this project. Please link a GitHub repository first.',
-            );
-        }
-
-        const repo = repositories[0];
-
-        const accessTokenResult = await this.repositoriesService.getDecryptedToken(
-            repo.id,
-        );
-
-        let tokenToUse = accessTokenResult.token;
-        if (accessTokenResult.isInstallationToken && tokenToUse) {
-            tokenToUse = await this.githubAppService.getInstallationToken(BigInt(tokenToUse));
-        }
-
-        const { owner, repo: repoName } =
-            await this.githubService.getRepoDetailsById(
-                repo.githubRepoId,
-                tokenToUse || undefined,
-            );
-
-        this.logger.log(
-            `Fetching commit ${task.githubCommitHash} from ${owner}/${repoName}`,
-        );
-
-        const files = await this.githubService.getCommitFiles(
-            owner,
-            repoName,
-            task.githubCommitHash,
-            tokenToUse || undefined,
-        );
 
         this.logger.log(`Found ${files.length} files to analyze`);
 
         if (files.length === 0) {
-            throw new BadRequestException(
-                'No supported files (JS/TS/Vue/HTML/CSS) found in this commit',
-            );
+            this.logger.warn(`No supported JS/TS files found in ${item.type} ${item.githubId}`);
+            return null;
         }
 
         const allDefects: DefectInfo[] = [];
-
         for (const file of files) {
-            this.logger.log(`Analyzing ${file.filename}...`);
-            const defects = await this.eslintService.analyzeCode(
-                file.filename,
-                file.content,
-            );
+            const defects = await this.eslintService.analyzeCode(file.filename, file.content);
             allDefects.push(...defects);
         }
 
-        const totalLinesOfCode = files.reduce((sum, file) => {
-            return sum + (file.additions || 0);
-        }, 0);
+        const totalLinesOfCode = files.reduce((sum, f) => sum + (f.additions || 0), 0);
 
-        this.logger.log(`Total defects found: ${allDefects.length}`);
-        this.logger.log(`Total lines of code: ${totalLinesOfCode}`);
-
-        const qualityScore = this.scoringService.calculateQualityScore(
-            allDefects,
-            totalLinesOfCode,
-        );
-
+        const qualityScore = this.scoringService.calculateQualityScore(allDefects, totalLinesOfCode);
         const decision = this.scoringService.getDecision(qualityScore);
+        const roundedScore = Math.round(qualityScore);
 
-        this.logger.log(
-            `Quality Score: ${qualityScore}, Decision: ${decision}`,
-        );
+        this.logger.log(`Quality Score: ${roundedScore}, Decision: ${decision}`);
 
         const report = await this.repository.createReport({
-            taskId,
-            analyzedCommitHash: task.githubCommitHash,
-            qualityScore: Math.round(qualityScore),
+            taskId: item.taskId,
+            githubItemId: item.id,
+            analyzedRef,
+            qualityScore: roundedScore,
             decision,
         });
 
@@ -132,26 +88,12 @@ export class AnalysisService {
                     filePath: d.filename,
                     lineNumber: d.line,
                     severity: d.severity,
-                    penaltyPoints: this.scoringService.calculatePenaltyPoints(
-                        d.severity,
-                    ),
+                    penaltyPoints: this.scoringService.calculatePenaltyPoints(d.severity),
                 })),
             );
         }
 
-        this.logger.log(`Analysis complete. Report ID: ${report.id}`);
-
-        const savedReport = await this.repository.findById(report.id);
-
-        return {
-            ...savedReport,
-            analyzedFiles: files.map((f) => ({
-                filename: f.filename,
-                content: f.content, // Include content for debugging
-                additions: f.additions,
-                deletions: f.deletions,
-            })),
-        };
+        return roundedScore;
     }
 
     /** Get analysis reports for a task */
@@ -173,6 +115,99 @@ export class AnalysisService {
         return this.repository.findDefectsByReportId(reportId);
     }
 
+    /** Fetch all committed files in a Pull Request (all commits combined) */
+    private async getPrFiles(owner: string, repo: string, prNumber: number, token?: string) {
+        const octokit = token ? new Octokit({ auth: token }) : new Octokit();
+
+        try {
+            // Get list of files changed in PR
+            const { data: prFiles } = await octokit.rest.pulls.listFiles({
+                owner,
+                repo,
+                pull_number: prNumber,
+                per_page: 100,
+            });
+
+            // Get the HEAD SHA of the PR to fetch latest file content
+            const { data: pr } = await octokit.rest.pulls.get({ owner, repo, pull_number: prNumber });
+            const headSha = pr.head.sha;
+
+            const supportedExtensions = /\.(js|jsx|ts|tsx|vue|html|css|scss|less|mjs|cjs)$/;
+
+            const files = prFiles.filter(
+                (f) => f.status !== 'removed' && supportedExtensions.test(f.filename),
+            );
+
+            this.logger.log(`PR #${prNumber} has ${files.length} supported files`);
+
+            const result = await Promise.all(
+                files.map(async (f) => {
+                    try {
+                        const { data } = await octokit.rest.repos.getContent({
+                            owner,
+                            repo,
+                            path: f.filename,
+                            ref: headSha,
+                        });
+
+                        if ('content' in data && data.content) {
+                            return {
+                                filename: f.filename,
+                                content: Buffer.from(data.content, 'base64').toString('utf-8'),
+                                additions: f.additions,
+                                deletions: f.deletions,
+                                changes: f.changes,
+                            };
+                        }
+                        return null;
+                    } catch (err) {
+                        this.logger.warn(`Failed to fetch ${f.filename}: ${err.message}`);
+                        return null;
+                    }
+                }),
+            );
+
+            return result.filter((f) => f !== null) as Array<{
+                filename: string;
+                content: string;
+                additions: number;
+                deletions: number;
+                changes: number;
+            }>;
+        } catch (error) {
+            this.logger.error(`Failed to get PR files: ${error.message}`);
+            throw new BadRequestException(`Cannot fetch PR #${prNumber}: ${error.message}`);
+        }
+    }
+
+    /** Resolve repo owner/name and access token for a project */
+    private async resolveRepoContext(projectId: number, userId: number) {
+        const repositories = await this.repositoriesService.findAll(projectId, userId);
+
+        if (repositories.length === 0) {
+            throw new NotFoundException(
+                'No repository linked to this project. Please link a GitHub repository first.',
+            );
+        }
+
+        const repo = repositories[0];
+        const accessTokenResult = await this.repositoriesService.getDecryptedToken(repo.id);
+
+        let token: string | undefined;
+        if (accessTokenResult.isInstallationToken && accessTokenResult.token) {
+            token = await this.githubAppService.getInstallationToken(BigInt(accessTokenResult.token));
+        } else {
+            token = accessTokenResult.token ?? undefined;
+        }
+
+        const { owner, repo: repoName } = await this.githubService.getRepoDetailsById(
+            repo.githubRepoId,
+            token,
+        );
+
+        return { owner, repoName, token };
+    }
+
     /** Map ESLint ruleId to RuleType enum */
     private mapRuleType(ruleId: string): RuleType {
         if (ruleId.includes('security') || ruleId.includes('eval')) {
@@ -181,11 +216,7 @@ export class AnalysisService {
         if (ruleId.includes('performance') || ruleId.includes('complexity')) {
             return RuleType.PERFORMANCE;
         }
-        if (
-            ruleId.includes('const') ||
-            ruleId.includes('var') ||
-            ruleId.includes('prefer')
-        ) {
+        if (ruleId.includes('const') || ruleId.includes('var') || ruleId.includes('prefer')) {
             return RuleType.BEST_PRACTICE;
         }
         return RuleType.STYLE;

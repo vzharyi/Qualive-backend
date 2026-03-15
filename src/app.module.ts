@@ -11,6 +11,7 @@ import { CommentsModule } from './models/comments/comments.module';
 import { ColumnsModule } from './models/columns/columns.module';
 import { JwtAuthGuard } from './models/auth/guards/jwt-auth.guard';
 import { GithubModule } from './models/github/github.module';
+import { TaskGithubItemsModule } from './models/task-github-items/task-github-items.module';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { GithubModule } from './models/github/github.module';
     CommentsModule,
     ColumnsModule,
     GithubModule,
+    TaskGithubItemsModule,
   ],
   providers: [
     {

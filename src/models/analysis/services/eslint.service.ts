@@ -15,20 +15,16 @@ export interface DefectInfo {
 export class EslintService {
     private readonly logger = new Logger(EslintService.name);
     private eslint: ESLint;
-
     constructor() {
         this.eslint = new ESLint({
-            // overrideConfigFile: true as any, // Removed to fix TS error
-            // useEslintrc: false, // Removed invalid property
-            overrideConfig: {
+            overrideConfigFile: true, // В ESLint v9 отключает поиск eslint.config.js
+            overrideConfig: [{
+                files: ['**/*.ts', '**/*.tsx', '**/*.js', '**/*.jsx'],
                 languageOptions: {
                     parser: require('@typescript-eslint/parser'),
                     parserOptions: {
                         ecmaVersion: 2021,
                         sourceType: 'module',
-                        project: false, // Explicitly disable project
-                        projectService: false, // Explicitly disable project service
-                        tsconfigRootDir: undefined, // Ensure no root dir is set
                     },
                 },
                 plugins: {
@@ -36,14 +32,19 @@ export class EslintService {
                 },
                 rules: {
                     'no-unused-vars': 'off',
-                    '@typescript-eslint/no-unused-vars': 'warn', // Downgraded to warn to avoid noise
+                    '@typescript-eslint/no-unused-vars': 'warn',
                     'no-console': 'warn',
                     'no-debugger': 'error',
+                    'eqeqeq': 'warn',
+                    'curly': 'warn',
+                    'prefer-const': 'warn',
+                    'no-var': 'error',
+                    'complexity': ['warn', 15],
                 },
-            } as any,
+            }] as any,
         });
 
-        this.logger.log('ESLint service initialized');
+        this.logger.log('ESLint service initialized (Flat Config API, no local files)');
     }
 
     /** Analyze code in memory without file system */

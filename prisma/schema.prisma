@@ -91,30 +91,48 @@ model BoardColumn {
 }
 
 model Task {
-  id               Int              @id @default(autoincrement())
-  projectId        Int              @map("project_id")
-  columnId         Int              @map("column_id")
-  title            String           @db.VarChar(100)
-  description      String?          @db.Text
-  assigneeId       Int?             @map("assignee_id")
-  reporterId       Int              @map("reporter_id")
-  priority         TaskPriority     @default(MEDIUM)
-  githubCommitHash String?          @map("github_commit_hash") @db.VarChar(255)
-  linesOfCode      Int?             @map("lines_of_code")
-  createdAt        DateTime         @default(now()) @map("created_at") @db.Timestamp(0)
-  updatedAt        DateTime         @default(now()) @updatedAt @map("updated_at") @db.Timestamp(0)
-  analysisReports  AnalysisReport[]
-  comments         Comment[]
-  assignee         User?            @relation("TaskAssignee", fields: [assigneeId], references: [id], map: "tasks_assignee_id_fk")
-  column           BoardColumn      @relation(fields: [columnId], references: [id], map: "tasks_column_id_fk")
-  project          Project          @relation(fields: [projectId], references: [id], onDelete: Cascade, map: "tasks_project_id_fk")
-  reporter         User             @relation("TaskReporter", fields: [reporterId], references: [id], map: "tasks_reporter_id_fk")
+  id              Int              @id @default(autoincrement())
+  projectId       Int              @map("project_id")
+  columnId        Int              @map("column_id")
+  title           String           @db.VarChar(100)
+  description     String?          @db.Text
+  assigneeId      Int?             @map("assignee_id")
+  reporterId      Int              @map("reporter_id")
+  priority        TaskPriority     @default(MEDIUM)
+  order           Int              @default(0)
+  linesOfCode     Int?             @map("lines_of_code")
+  createdAt       DateTime         @default(now()) @map("created_at") @db.Timestamp(0)
+  updatedAt       DateTime         @default(now()) @updatedAt @map("updated_at") @db.Timestamp(0)
+  analysisReports AnalysisReport[]
+  comments        Comment[]
+  githubItems     TaskGithubItem[]
+  assignee        User?            @relation("TaskAssignee", fields: [assigneeId], references: [id], map: "tasks_assignee_id_fk")
+  column          BoardColumn      @relation(fields: [columnId], references: [id], map: "tasks_column_id_fk")
+  project         Project          @relation(fields: [projectId], references: [id], onDelete: Cascade, map: "tasks_project_id_fk")
+  reporter        User             @relation("TaskReporter", fields: [reporterId], references: [id], map: "tasks_reporter_id_fk")
 
   @@index([projectId], map: "tasks_project_id_fk")
   @@index([columnId], map: "tasks_column_id_fk")
   @@index([assigneeId], map: "tasks_assignee_id_fk")
   @@index([reporterId], map: "tasks_reporter_id_fk")
   @@map("tasks")
+}
+
+model TaskGithubItem {
+  id              Int              @id @default(autoincrement())
+  taskId          Int              @map("task_id")
+  type            GithubItemType
+  githubId        String           @map("github_id") @db.VarChar(255)
+  url             String           @db.VarChar(500)
+  title           String?          @db.VarChar(500)
+  author          String?          @db.VarChar(255)
+  codeScore       Float?           @map("code_score")
+  createdAt       DateTime         @default(now()) @map("created_at") @db.Timestamp(0)
+  task            Task             @relation(fields: [taskId], references: [id], onDelete: Cascade, map: "task_github_items_task_id_fk")
+  analysisReports AnalysisReport[]
+
+  @@index([taskId], map: "task_github_items_task_id_fk")
+  @@map("task_github_items")
 }
 
 model Comment {
@@ -133,16 +151,19 @@ model Comment {
 }
 
 model AnalysisReport {
-  id                 Int            @id @default(autoincrement())
-  taskId             Int            @map("task_id")
-  analyzedCommitHash String         @map("analyzed_commit_hash") @db.VarChar(255)
-  qualityScore       Int?           @map("quality_score")
-  decision           ReportDecision @default(PENDING)
-  analyzedAt         DateTime       @default(now()) @map("created_at") @db.Timestamp(0)
-  task               Task           @relation(fields: [taskId], references: [id], onDelete: Cascade, map: "analysis_reports_task_id_fk")
-  defects            Defect[]
+  id           Int             @id @default(autoincrement())
+  taskId       Int             @map("task_id")
+  githubItemId Int?            @map("github_item_id")
+  analyzedRef  String          @map("analyzed_ref") @db.VarChar(255)
+  qualityScore Int?            @map("quality_score")
+  decision     ReportDecision  @default(PENDING)
+  analyzedAt   DateTime        @default(now()) @map("created_at") @db.Timestamp(0)
+  task         Task            @relation(fields: [taskId], references: [id], onDelete: Cascade, map: "analysis_reports_task_id_fk")
+  githubItem   TaskGithubItem? @relation(fields: [githubItemId], references: [id], onDelete: SetNull, map: "analysis_reports_github_item_id_fk")
+  defects      Defect[]
 
   @@index([taskId], map: "analysis_reports_task_id_fk")
+  @@index([githubItemId], map: "analysis_reports_github_item_id_fk")
   @@map("analysis_reports")
 }
 
@@ -196,4 +217,9 @@ enum RuleType {
   SECURITY      @map("security")
   PERFORMANCE   @map("performance")
   BEST_PRACTICE @map("best_practice")
+}
+
+enum GithubItemType {
+  PULL_REQUEST @map("pull_request")
+  COMMIT       @map("commit")
 }

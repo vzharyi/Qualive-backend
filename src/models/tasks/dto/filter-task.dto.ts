@@ -35,12 +35,12 @@ export class FilterTaskDto {
     @ApiProperty({
         description: 'Sort by field',
         example: 'createdAt',
-        enum: ['createdAt', 'priority', 'updatedAt'],
+        enum: ['createdAt', 'priority', 'order', 'updatedAt'],
         required: false,
     })
     @IsString()
     @IsOptional()
-    @IsIn(['createdAt', 'priority', 'updatedAt'])
+    @IsIn(['createdAt', 'priority', 'order', 'updatedAt'])
     sortBy?: string;
 
     @ApiProperty({ description: 'Sort order', example: 'desc', enum: ['asc', 'desc'], required: false })

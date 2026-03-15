@@ -1,11 +1,16 @@
 import {
     Controller,
     Get,
+    Post,
     Query,
     Res,
+    Body,
+    Headers,
     ParseIntPipe,
     UseGuards,
     BadRequestException,
+    Inject,
+    forwardRef,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import type { Response } from 'express';
@@ -21,6 +26,8 @@ export class GithubController {
     constructor(
         private readonly githubAppService: GithubAppService,
         private configService: ConfigService,
+        @Inject(forwardRef(() => 'TaskGithubItemsServiceToken'))
+        private readonly taskGithubItemsService: any,
     ) { }
 
     @Get('install')
@@ -59,5 +66,33 @@ export class GithubController {
         } catch (error) {
             return res.redirect(`${frontendUrl}?error=github_setup_failed`);
         }
+    }
+
+    @Public()
+    @Post('webhook')
+    @ApiOperation({ summary: 'Handles GitHub App webhook events (pull_request, push)' })
+    async handleWebhook(
+        @Headers('x-github-event') event: string,
+        @Body() payload: any,
+    ) {
+        await this.githubAppService.handleWebhook(event, payload);
+
+        const items = this.githubAppService._lastWebhookItems;
+        this.githubAppService._lastWebhookItems = [];
+
+        if (items.length > 0 && this.taskGithubItemsService) {
+            for (const item of items) {
+                try {
+                    // Create item without userId — webhook uses system context
+                    // We skip access check for webhook flow by calling repository directly
+                    await this.taskGithubItemsService.createFromWebhook(item);
+                } catch (err) {
+                    // Log but don't fail the webhook response
+                    console.error(`Failed to create github item for task #${item.taskId}: ${err.message}`);
+                }
+            }
+        }
+
+        return { received: true };
     }
 }

@@ -3,6 +3,7 @@ import { Expose, Type } from 'class-transformer';
 import { User } from '../../users/entities/user.entity';
 import { Project } from '../../projects/entities/project.entity';
 import { Column } from '../../columns/entities/column.entity';
+import { TaskGithubItem } from '../../task-github-items/entities/task-github-item.entity';
 
 export class Task implements PrismaTask {
     @Expose()
@@ -30,7 +31,7 @@ export class Task implements PrismaTask {
     priority: TaskPriority;
 
     @Expose()
-    githubCommitHash: string | null;
+    order: number;
 
     @Expose()
     linesOfCode: number | null;
@@ -57,4 +58,8 @@ export class Task implements PrismaTask {
     @Expose()
     @Type(() => Project)
     project?: Project;
+
+    @Expose()
+    @Type(() => TaskGithubItem)
+    githubItems?: TaskGithubItem[];
 }

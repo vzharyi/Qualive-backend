@@ -61,11 +61,15 @@ export class TasksRepository {
             where.priority = priority;
         }
 
-        const orderBy: any = {};
+        let orderBy: any;
         if (sortBy) {
-            orderBy[sortBy] = sortOrder || 'desc';
+            orderBy = { [sortBy]: sortOrder || 'desc' };
         } else {
-            orderBy.createdAt = 'desc';
+            orderBy = [
+                { priority: 'desc' },
+                { order: 'asc' },
+                { createdAt: 'desc' }
+            ];
         }
 
         return this.prisma.task.findMany({

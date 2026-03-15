@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { GithubController } from './github.controller';
 import { GithubAppService } from './github.service';
 import { JwtModule } from '@nestjs/jwt';
@@ -13,7 +13,7 @@ import { RepositoriesModule } from '../repositories/repositories.module';
             inject: [ConfigService],
             useFactory: async (configService: ConfigService) => ({
                 secret: configService.get('JWT_SECRET'),
-                signOptions: { expiresIn: '15m' }, // Token for state
+                signOptions: { expiresIn: '15m' },
             }),
         }),
         ConfigModule,
@@ -21,7 +21,13 @@ import { RepositoriesModule } from '../repositories/repositories.module';
         RepositoriesModule,
     ],
     controllers: [GithubController],
-    providers: [GithubAppService],
-    exports: [GithubAppService],
+    providers: [
+        GithubAppService,
+        {
+            provide: 'TaskGithubItemsServiceToken',
+            useValue: null, // Will be replaced at runtime by TaskGithubItemsModule export
+        },
+    ],
+    exports: [GithubAppService, 'TaskGithubItemsServiceToken'],
 })
 export class GithubModule { }
