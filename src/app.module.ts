@@ -1,20 +1,26 @@
 import { Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
+import { ServeStaticModule } from '@nestjs/serve-static';
+import { join } from 'path';
 import { PrismaModule } from './prisma/prisma.module';
-import { UsersModule } from './models/users/users.module';
-import { ProjectsModule } from './models/projects/projects.module';
-import { TasksModule } from './models/tasks/tasks.module';
-import { AuthModule } from './models/auth/auth.module';
-import { RepositoriesModule } from './models/repositories/repositories.module';
-import { AnalysisModule } from './models/analysis/analysis.module';
-import { CommentsModule } from './models/comments/comments.module';
-import { ColumnsModule } from './models/columns/columns.module';
-import { JwtAuthGuard } from './models/auth/guards/jwt-auth.guard';
-import { GithubModule } from './models/github/github.module';
-import { TaskGithubItemsModule } from './models/task-github-items/task-github-items.module';
+import { UsersModule } from './modules/users/users.module';
+import { ProjectsModule } from './modules/projects/projects.module';
+import { TasksModule } from './modules/tasks/tasks.module';
+import { AuthModule } from './modules/auth/auth.module';
+import { RepositoriesModule } from './modules/repositories/repositories.module';
+import { AnalysisModule } from './modules/analysis/analysis.module';
+import { CommentsModule } from './modules/comments/comments.module';
+import { ColumnsModule } from './modules/columns/columns.module';
+import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.guard';
+import { GithubModule } from './modules/github/github.module';
+import { TaskGithubItemsModule } from './modules/task-github-items/task-github-items.module';
 
 @Module({
   imports: [
+    ServeStaticModule.forRoot({
+      rootPath: join(__dirname, '..', 'uploads'),
+      serveRoot: '/uploads',
+    }),
     PrismaModule,
     UsersModule,
     ProjectsModule,

@@ -1,7 +1,8 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { plainToInstance } from 'class-transformer';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { ChangePasswordDto } from './dto/change-password.dto';
 import { SERIALIZATION_GROUPS, User } from './entities/user.entity';
 import { UsersRepository } from './users.repository';
 import { HashingPasswordsService } from './hashing-passwords.service';
@@ -107,6 +108,27 @@ export class UsersService {
     return plainToInstance(User, updatedUser, {
       groups: SERIALIZATION_GROUPS.CONFIDENTIAL,
     });
+  }
+
+  async changePassword(userId: number, changePasswordDto: ChangePasswordDto): Promise<void> {
+    const user = await this.usersRepository.findById(userId);
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    const isPasswordValid = await this.passwordService.compare(
+      changePasswordDto.oldPassword,
+      user.password,
+    );
+
+    if (!isPasswordValid) {
+      throw new BadRequestException('Invalid old password');
+    }
+
+    const hashedNewPassword = await this.passwordService.hash(changePasswordDto.newPassword);
+
+    await this.usersRepository.update(userId, { password: hashedNewPassword } as any);
   }
 
   async remove(id: number): Promise<void> {

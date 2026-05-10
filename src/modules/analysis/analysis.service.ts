@@ -29,6 +29,38 @@ export class AnalysisService {
     ) { }
 
     /**
+     * Analyze raw source code strings (for landing page / testing).
+     * Bypasses DB/GitHub logic.
+     */
+    async analyzeRawCode(code: string, fileName: string = 'virtual-file.ts') {
+        this.logger.log(`Analyzing raw code (${fileName})`);
+
+        const defects = await this.eslintService.analyzeCode(fileName, code);
+        const linesOfCode = code.split('\n').length;
+
+        const qualityScore = this.scoringService.calculateQualityScore(
+            defects,
+            linesOfCode,
+        );
+        const decision = this.scoringService.getDecision(qualityScore);
+
+        return {
+            qualityScore: Math.round(qualityScore),
+            decision,
+            linesOfCode,
+            defects: defects.map((d) => ({
+                ruleId: d.ruleId,
+                ruleType: this.mapRuleType(d.ruleId),
+                message: d.message,
+                line: d.line,
+                column: d.column,
+                severity: d.severity,
+            })),
+        };
+    }
+
+
+    /**
      * Analyze a TaskGithubItem (PR or Commit).
      * Returns quality score (0–100) or null if nothing to analyze.
      */
@@ -210,15 +242,49 @@ export class AnalysisService {
 
     /** Map ESLint ruleId to RuleType enum */
     private mapRuleType(ruleId: string): RuleType {
-        if (ruleId.includes('security') || ruleId.includes('eval')) {
+        // Security rules → SECURITY
+        if (
+            ruleId.startsWith('security/') ||
+            ruleId.includes('eval') ||
+            ruleId.includes('injection')
+        ) {
             return RuleType.SECURITY;
         }
+
+        // SonarJS → cognitive complexity / duplicates → PERFORMANCE & STYLE
+        if (ruleId.startsWith('sonarjs/')) {
+            if (ruleId.includes('complexity') || ruleId.includes('cognitive')) {
+                return RuleType.PERFORMANCE;
+            }
+            // duplicate-string, identical-functions, collapsible-if, etc. → STYLE
+            return RuleType.STYLE;
+        }
+
+        // Promise plugin → async correctness → BEST_PRACTICE
+        if (ruleId.startsWith('promise/')) {
+            return RuleType.BEST_PRACTICE;
+        }
+
+        // Unicorn — modern idiomatic code → BEST_PRACTICE
+        if (ruleId.startsWith('unicorn/')) {
+            return RuleType.BEST_PRACTICE;
+        }
+
+        // Legacy / generic performance heuristics
         if (ruleId.includes('performance') || ruleId.includes('complexity')) {
             return RuleType.PERFORMANCE;
         }
-        if (ruleId.includes('const') || ruleId.includes('var') || ruleId.includes('prefer')) {
+
+        // Generic best-practice heuristics
+        if (
+            ruleId.includes('const') ||
+            ruleId.includes('var') ||
+            ruleId.includes('prefer') ||
+            ruleId.includes('no-unused')
+        ) {
             return RuleType.BEST_PRACTICE;
         }
+
         return RuleType.STYLE;
     }
 }

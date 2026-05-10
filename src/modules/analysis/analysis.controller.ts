@@ -1,6 +1,8 @@
 import {
     Controller,
     Get,
+    Post,
+    Body,
     Param,
     ParseIntPipe,
     HttpStatus,
@@ -14,12 +16,26 @@ import {
 } from '@nestjs/swagger';
 import { AnalysisService } from './analysis.service';
 import { UserId } from '../auth/decorators/user-id.decorator';
+import { Public } from '../auth/decorators/public.decorator';
+import { AnalyzeRawCodeDto } from './dto/analyze-raw-code.dto';
 
 @Controller('analysis')
 @ApiTags('Analysis')
 @ApiBearerAuth()
 export class AnalysisController {
     constructor(private readonly analysisService: AnalysisService) { }
+
+    @Public()
+    @Post('test')
+    @ApiOperation({ summary: 'Test ESLint analysis on raw code (Public)' })
+    @ApiResponse({
+        status: HttpStatus.OK,
+        description: 'Returns analysis score and found defects',
+    })
+    testAnalysis(@Body() dto: AnalyzeRawCodeDto) {
+        return this.analysisService.analyzeRawCode(dto.code, dto.fileName);
+    }
+
 
     @Get('reports/:taskId')
     @ApiOperation({ summary: 'Get all analysis reports for a task (with defects and linked GitHub item)' })
