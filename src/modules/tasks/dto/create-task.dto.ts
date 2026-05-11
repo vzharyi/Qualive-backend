@@ -5,6 +5,7 @@ import {
     IsOptional,
     IsEnum,
     MaxLength,
+    IsDateString,
 } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 import { TaskPriority } from '@prisma/client';
@@ -40,6 +41,11 @@ export class CreateTaskDto {
     @IsEnum(TaskPriority)
     @IsOptional()
     priority?: TaskPriority;
+
+    @ApiProperty({ description: 'Task due date', example: '2026-05-15T12:00:00Z', required: false })
+    @IsDateString()
+    @IsOptional()
+    dueDate?: string;
 
     @ApiProperty({ description: 'Task order (used for manual sorting)', example: 1, required: false })
     @IsNumber()

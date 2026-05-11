@@ -37,6 +37,9 @@ export class Task implements PrismaTask {
     linesOfCode: number | null;
 
     @Expose()
+    dueDate: Date | null;
+
+    @Expose()
     createdAt: Date;
 
     @Expose()

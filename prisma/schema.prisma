@@ -101,6 +101,7 @@ model Task {
   priority        TaskPriority?
   order           Int              @default(0)
   linesOfCode     Int?             @map("lines_of_code")
+  dueDate         DateTime?        @map("due_date") @db.Timestamp(0)
   createdAt       DateTime         @default(now()) @map("created_at") @db.Timestamp(0)
   updatedAt       DateTime         @default(now()) @updatedAt @map("updated_at") @db.Timestamp(0)
   analysisReports AnalysisReport[]

@@ -50,6 +50,7 @@ export class TasksService {
         const newTask = await this.repository.create({
             ...createTaskDto,
             reporterId: userId,
+            dueDate: createTaskDto.dueDate ? new Date(createTaskDto.dueDate) : undefined,
         });
 
         return plainToInstance(Task, newTask, {
@@ -119,6 +120,10 @@ export class TasksService {
         }
 
         const { projectId, ...updateData } = updateTaskDto as any;
+
+        if (updateData.dueDate) {
+            updateData.dueDate = new Date(updateData.dueDate);
+        }
 
         const updatedTask = await this.repository.update(id, updateData);
 
