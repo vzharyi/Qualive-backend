@@ -190,7 +190,19 @@ export class UsersService {
     );
 
     const baseLogin = oauthData.email.split('@')[0];
-    const login = `${baseLogin}_${Date.now()}`;
+    let login = baseLogin;
+    let isUnique = false;
+    let counter = 1;
+
+    while (!isUnique) {
+      const existingUser = await this.usersRepository.findByLogin(login);
+      if (!existingUser) {
+        isUnique = true;
+      } else {
+        login = `${baseLogin}${counter}`;
+        counter++;
+      }
+    }
 
     const user = await this.usersRepository.create({
       login,

@@ -95,6 +95,10 @@
       "**/*.(t|j)s"
     ],
     "coverageDirectory": "../coverage",
-    "testEnvironment": "node"
-  }
+    "testEnvironment": "node",
+    "transformIgnorePatterns": [
+      "node_modules/(?!(@octokit|universal-user-agent|before-after-hook|eslint-plugin-unicorn)/)"
+    ]
+  },
+  "packageManager": "yarn@4.14.1"
 }

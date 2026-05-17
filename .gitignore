@@ -65,3 +65,5 @@ DESIGN.json
 PRODUCT.md
 skills-lock.json
 SKILL.md
+
+*.yarn
